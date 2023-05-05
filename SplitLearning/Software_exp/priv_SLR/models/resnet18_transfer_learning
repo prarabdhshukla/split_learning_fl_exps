@@ -1,0 +1,87 @@
+from torchvision import models
+import torch.nn as nn
+
+# change these manually for now
+num_front_layers = 4
+num_back_layers = 3
+# remember unfreeze will be counted from the end of each model
+num_unfrozen_front_layers = 0
+num_unfrozen_center_layers = 0
+num_unfrozen_back_layers = 1
+
+def get_resnet18(pretrained: bool):
+    model = models.resnet18(pretrained=pretrained)  # this will use cached model if available instead of downloadinig again
+    return model
+
+
+class front(nn.Module):
+    def __init__(self, input_channels=3, pretrained=False):
+        super(front, self).__init__()
+        model = get_resnet18(pretrained)
+        model_children = list(model.children())
+
+        self.front_model = nn.Sequential(*model_children[:num_front_layers])
+
+        if pretrained:
+            params_iterator = iter(self.front_model.parameters())
+            for i in range(num_front_layers-num_unfrozen_front_layers):
+                print(f"{i} {num_front_layers}")
+                param = next(params_iterator)
+                param.requires_grad = False
+    
+        for params in self.front_model.parameters():
+            print(params.requires_grad)
+
+    def forward(self, x):
+        x = self.front_model(x)
+        return x
+
+
+class center(nn.Module):
+    def __init__(self, pretrained=False):
+        super(center, self).__init__()
+        model = get_resnet18(pretrained)
+        model_children = list(model.children())
+        model_length = len(model_children)
+        
+        if pretrained:
+            for i in range(model_length-num_unfrozen_center_layers):
+                model_children[i].requires_grad = False
+        
+        self.center_model = nn.Sequential(*model_children[num_front_layers:model_length-num_back_layers])
+
+
+    def forward(self, x):
+        x = self.center_model(x)
+        return x
+
+
+class back(nn.Module):
+    def __init__(self, pretrained=False, output_dim=10):
+        super(back, self).__init__()
+        model = get_resnet18(pretrained)
+        model_children = list(model.children())
+        model_length = len(model_children)
+
+        if pretrained:
+            for i in range(model_length-num_unfrozen_back_layers):
+                model_children[i].requires_grad = False
+        
+        fc_layer = nn.Linear(512, output_dim)
+        model_children = model_children[:-1] + [nn.Flatten()] + [fc_layer]
+        self.back_model = nn.Sequential(*model_children[model_length-num_back_layers:])
+
+
+    def forward(self, x):
+        x = self.back_model(x)
+        return x
+
+
+if __name__ == '__main__':
+    model = front(pretrained=True)
+    print(f'{model.front_model}\n\n')
+    model = center(pretrained=True)
+    print(f'{model.center_model}\n\n')
+    model = back(pretrained=True)
+    print(f'{model.back_model}')
+    

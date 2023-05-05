@@ -1,0 +1,8 @@
+numpy
+tqdm
+scikit-learn
+scipy
+jax
+dm-haiku
+optax
+jaxlib

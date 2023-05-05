@@ -1,0 +1,32 @@
+# This is a basic workflow to help you get started with Actions
+name: pr-validation
+
+# Controls when the workflow will run
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL: True
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.10' 
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install -e ."[all_extra]"
+      - name: Test with pytest
+        run: |
+          pytest tests/strategies/
+          pytest tests/benchmarks/
+          # TODO: for now running only some tests. All tests should be run

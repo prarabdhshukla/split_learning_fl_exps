@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./Software_exp/motely/p13n_benchmark_cross_silo/vehicle_school"
+    ]
+}
